@@ -1,7 +1,6 @@
 package org.kairosdb.core.oauth2.client;
 
 import org.kairosdb.core.oauth2.exceptions.OAuthFlowException;
-import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.TimeUnit;
 
@@ -14,7 +13,7 @@ public final class OAuthenticatedClient implements OAuthClient
     private long endTime;
 
 
-    protected OAuthenticatedClient(String internalToken, String accessToken, String userIdentifier, long expireIn)
+    OAuthenticatedClient(String internalToken, String accessToken, String userIdentifier, long expireIn)
     {
         this.internalToken = internalToken;
         this.accessToken = accessToken;

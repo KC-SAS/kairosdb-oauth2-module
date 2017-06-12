@@ -94,10 +94,10 @@ public class OAuthGoogleProvider implements OAuthProvider
     }
 
     @Override
-    public OAuthService.OAuthDataProvided startAuthentication(URI originUri)
+    public OAuthService.OAuthProviderResponse startAuthentication(URI originUri)
             throws OAuthFlowException
     {
-        logger.info(String.format("Start authentication from '%s'.", originUri.toString()));
+        logger.info(String.format("Start authentication from '%s'.", concatUri(originUri)));
 
         try
         {
@@ -105,8 +105,8 @@ public class OAuthGoogleProvider implements OAuthProvider
             final URI redirectUri = new URI(oAuthClientRequest.getLocationUri());
             final OAuthGoogleClient googleClient = new OAuthGoogleClient(originUri);
 
-            logger.info(String.format("Redirect user to '%s'.", redirectUri.toString()));
-            return new OAuthService.OAuthDataProvided(
+            logger.info(String.format("Redirect user to '%s'.", concatUri(originUri)));
+            return new OAuthService.OAuthProviderResponse(
                     googleClient,
                     redirectUri,
                     oAuthClientRequest.getHeaders(),
@@ -120,7 +120,7 @@ public class OAuthGoogleProvider implements OAuthProvider
     }
 
     @Override
-    public OAuthService.OAuthDataProvided finishAuthentication(
+    public OAuthService.OAuthProviderResponse finishAuthentication(
             OAuthenticatingClient oAuthenticatingClient,
             String code, String state,
             Function<String, String> internalTokenGenerator
@@ -128,7 +128,7 @@ public class OAuthGoogleProvider implements OAuthProvider
     {
         logger.info(String.format(
                 "Finish authentication from '%s' ('%s').",
-                oAuthenticatingClient.getOriginUri(),
+                concatUri(oAuthenticatingClient.getOriginUri()),
                 oAuthenticatingClient.getAccessToken())
         );
 
@@ -147,7 +147,7 @@ public class OAuthGoogleProvider implements OAuthProvider
                     .build();
 
             logger.info(String.format("User '%s' authenticated", authenticatedClient.getUserIdentifier()));
-            return new OAuthService.OAuthDataProvided(
+            return new OAuthService.OAuthProviderResponse(
                     authenticatedClient,
                     oAuthenticatingClient.getOriginUri(),
                     null,
@@ -160,6 +160,14 @@ public class OAuthGoogleProvider implements OAuthProvider
 
     }
 
+
+    private String concatUri(URI uri)
+    {
+        String sUri = uri.toString();
+        if (sUri.length() < 64)
+            return sUri;
+        return sUri.substring(0, 64) + "...";
+    }
 
     private String getUserIdentifier(OAuthClient oAuthClient, String accessToken)
             throws OAuthSystemException, OAuthProblemException

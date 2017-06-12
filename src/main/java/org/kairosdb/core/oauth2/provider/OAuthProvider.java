@@ -60,25 +60,24 @@ public interface OAuthProvider
      * Start authentication flow with OAuth2.
      *
      * @param originUri uri to redirect user when the authentication flow is finished
-     * @return {@link OAuthService.OAuthDataProvided} containing
+     * @return {@link OAuthService.OAuthProviderResponse} containing
      * the configured {@link OAuthenticatingClient} and
      * information needed to redirect the user
      */
-    OAuthService.OAuthDataProvided startAuthentication(URI originUri) throws OAuthFlowException;
+    OAuthService.OAuthProviderResponse startAuthentication(URI originUri) throws OAuthFlowException;
 
     /**
      * Finish authentication flow with OAuth2.
      *
-     * @param client                 client instance who want to finish the authentication
      * @param code                   code return by the provider during redirection
      * @param state                  state return by the provider during redirection
      * @param internalTokenGenerator function required to generate internalToken
-     * @return {@link OAuthService.OAuthDataProvided} containing
+     * @return {@link OAuthService.OAuthProviderResponse} containing
      * the configured {@link OAuthenticatedClient} and
      * information needed to redirect the user
      */
-    OAuthService.OAuthDataProvided finishAuthentication(OAuthenticatingClient oAuthenticatingClient,
-                                                        String code, String state,
-                                                        Function<String, String> internalTokenGenerator)
+    OAuthService.OAuthProviderResponse finishAuthentication(OAuthenticatingClient oAuthenticatingClient,
+                                                            String code, String state,
+                                                            Function<String, String> internalTokenGenerator)
             throws OAuthFlowException;
 }

@@ -15,7 +15,7 @@ public class OAuthModule extends ServletModule
     protected void configureServlets()
     {
         bind(OAuthFilter.class).in(Singleton.class);
-        bind(OAuthAuthorizeRessource.class).in(Singleton.class);// Static class -> NOT REIMPLEMENT IT
+        bind(OAuthAuthorizeRessource.class).in(Singleton.class);
 
         bind(OAuthService.class).in(Singleton.class);
         bind(OAuthProvider.class).to(OAuthGoogleProvider.class).in(Singleton.class); //From properties

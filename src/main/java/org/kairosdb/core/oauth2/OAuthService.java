@@ -40,13 +40,13 @@ public class OAuthService
                     "HTTP_FORWARDED_FOR", "HTTP_FORWARDED", "HTTP_VIA", "REMOTE_ADDR"
             };
 
-    private String clientId;
-    private String clientSecret;
-    private String redirectUri;
+    private final String clientId;
+    private final String clientSecret;
+    private final String redirectUri;
 
-    private OAuthProvider provider;
-    private OAuthCookieManager cookieManager;
-    private Map<String, OAuthClient> clients = new HashMap<>();
+    private final Map<String, OAuthClient> clients = new HashMap<>();
+    private final OAuthProvider provider;
+    private final OAuthCookieManager cookieManager;
 
 
     @Inject
@@ -62,6 +62,7 @@ public class OAuthService
     }
 
 
+    //region Static tools methods
     public static void validateProperty(String property, String prefix)
     {
         if (property == null || property.isEmpty())
@@ -87,7 +88,6 @@ public class OAuthService
 
     private static String generateInternalToken(OAuthPacket packet, String accessToken)
     {
-        logger.info(String.format("Client: %s ^ %s", packet.getRemoteAddr(), accessToken));
         String remoteAddress = packet.remoteAddr;
 
         try
@@ -108,33 +108,43 @@ public class OAuthService
         }
     }
 
-    private void destroyClient(String internalToken)
+    private static void verifyTokenValidity(OAuthPacket packet, OAuthClient client)
+            throws OAuthValidationException
     {
-        if (clients.containsKey(internalToken))
-            clients.remove(internalToken);
+        final String currentInternalToken = generateInternalToken(packet, client.getAccessToken());
+        if (!currentInternalToken.equals(client.getInternalToken()))
+            throw new OAuthValidationException(currentInternalToken, client.getInternalToken());
     }
+    //endregion
 
+
+    //region OAuth methods
     private void isProviderConfigured()
     {
         if (provider.isConfigured())
             return;
 
-        validateProperty(this.clientId, CLIENT_ID_PREFIX);
-        validateProperty(this.clientSecret, CLIENT_SECRET_PREFIX);
-        validateProperty(this.redirectUri, REDIRECTION_URI_PREFIX);
+        synchronized (this)
+        {
+            if (provider.isConfigured())
+                return;
 
-        this.provider
-                .setup(this.redirectUri)
-                .setup(this.clientId, this.clientSecret)
-                .configure();
+            validateProperty(this.clientId, CLIENT_ID_PREFIX);
+            validateProperty(this.clientSecret, CLIENT_SECRET_PREFIX);
+            validateProperty(this.redirectUri, REDIRECTION_URI_PREFIX);
+
+            this.provider
+                    .setup(this.redirectUri)
+                    .setup(this.clientId, this.clientSecret)
+                    .configure();
+        }
     }
-
 
     public OAuthPacket startAuthentication(OAuthPacket requestPacket, URI originUri) throws OAuthFlowException
     {
         isProviderConfigured();
 
-        final OAuthDataProvided providerResponse = provider.startAuthentication(originUri);
+        final OAuthProviderResponse providerResponse = provider.startAuthentication(originUri);
         final OAuthClient oAuthClient = providerResponse.client;
         final OAuthPacket oAuthPacket = new OAuthPacket(
                 requestPacket.remoteAddr,
@@ -143,7 +153,7 @@ public class OAuthService
                 cookieManager
         );
 
-        clients.put(oAuthClient.getInternalToken(), oAuthClient);
+        addClient(oAuthClient);
 
         oAuthPacket.setHeaders(providerResponse.getHeaders());
         oAuthPacket.setBody(providerResponse.getBody());
@@ -155,7 +165,7 @@ public class OAuthService
         isProviderConfigured();
 
         final String internalToken = requestPacket.internalToken;
-        OAuthClient oAuthClient = clients.get(internalToken);
+        OAuthClient oAuthClient = getClient(requestPacket);
 
         if (oAuthClient == null)
             throw new OAuthFlowException("Invalid authorization (User not found)");
@@ -163,7 +173,7 @@ public class OAuthService
             throw new OAuthFlowException("Invalid authorization (User already authenticated)");
 
 
-        final OAuthDataProvided providerResponse = provider.finishAuthentication(
+        final OAuthProviderResponse providerResponse = provider.finishAuthentication(
                 (OAuthenticatingClient) oAuthClient,
                 code, state,
                 (String accessToken) -> generateInternalToken(requestPacket, accessToken)
@@ -177,7 +187,7 @@ public class OAuthService
                 cookieManager
         );
 
-        destroyClient(internalToken);
+        removeClient(internalToken);
 
         try
         {
@@ -187,14 +197,87 @@ public class OAuthService
             throw new OAuthFlowException("Invalid provider : It doesn't use internal token generator");
         }
 
-        clients.put(oAuthClient.getInternalToken(), oAuthClient);
+        addClient(oAuthClient);
 
         oAuthPacket.setHeaders(providerResponse.getHeaders());
         oAuthPacket.setBody(providerResponse.getBody());
         return oAuthPacket;
     }
+    //endregion
+
+    //region Client tools methods
+    private synchronized void addClient(OAuthClient oAuthClient)
+    {
+        clients.put(oAuthClient.getInternalToken(), oAuthClient);
+    }
+
+    private synchronized void removeClient(String internalToken)
+    {
+        if (internalToken != null && clients.containsKey(internalToken))
+            clients.remove(internalToken);
+    }
+
+    public OAuthClient getClient(OAuthPacket packet)
+            throws OAuthValidationException
+    {
+        isProviderConfigured();
+
+        final String internalToken = packet.internalToken;
+        if (internalToken == null || !this.clients.containsKey(internalToken))
+            return null;
+
+        final OAuthClient client;
+        synchronized (this)
+        {
+            client = this.clients.get(internalToken);
+        }
+
+        if (client.isObsolete(TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis())))
+        {
+            logger.warn(String.format("Client '%s' obsolete.", client.getUserIdentifier()));
+            removeClient(client.getInternalToken());
+            return null;
+        }
+
+        if (client instanceof OAuthenticatedClient)
+            verifyTokenValidity(packet, client);
+        return client;
+    }
+
+    public void verifyLifetime()
+    {
+        logger.info("Auto clean obsoleted user token");
+        if (this.clients.isEmpty())
+            return;
+
+        synchronized (this)
+        {
+            final List<OAuthClient> clientList;
+            clientList = new ArrayList<>(this.clients.values());
+
+            final long currentTime = TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis());
+            OAuthClient previousClient = null;
+
+            clientList.sort(OAuthClient::compareTo);
+            for (OAuthClient client : clientList)
+            {
+                boolean isObsolete = client.isObsolete(currentTime);
+
+                if (previousClient != null &&
+                        client.getUserIdentifier() != null &&
+                        previousClient.getUserIdentifier().equals(client.getUserIdentifier()))
+                    removeClient(previousClient.getInternalToken());
+                if (isObsolete)
+                    removeClient(client.getInternalToken());
+
+                previousClient = isObsolete ? null : client;
+            }
+        }
+    }
+    //endregion
 
 
+    //region Getter
     public OAuthCookieManager getCookieManager()
     {
         isProviderConfigured();
@@ -206,80 +289,10 @@ public class OAuthService
         isProviderConfigured();
         return redirectUri;
     }
-
-    public OAuthClient getClient(OAuthPacket packet)
-            throws OAuthValidationException
-    {
-        isProviderConfigured();
+    //endregions
 
 
-        logger.info("=============================================================================================");
-        logger.info("Find " + Arrays.toString(packet.internalToken.getBytes(StandardCharsets.UTF_8)) + " in -> ");
-        for (Map.Entry entry : this.clients.entrySet())
-        {
-            String key = Arrays.toString(entry.getKey().toString().getBytes(StandardCharsets.UTF_8));
-            logger.info(key + ", " + entry.getValue());
-        }
-        logger.info("=============================================================================================");
-
-
-        final String internalToken = packet.internalToken;
-
-        if (internalToken == null || !this.clients.containsKey(internalToken))
-            return null;
-
-        OAuthClient client = this.clients.get(internalToken);
-        if (client.isObsolete(TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis())))
-        {
-            logger.error("Obsolete client");
-            destroyClient(client.getInternalToken());
-            return null;
-        }
-
-        if (client instanceof OAuthenticatedClient)
-            verifyTokenValidity(packet, client);
-        return client;
-    }
-
-    public void verifyTokenValidity(OAuthPacket packet, OAuthClient client)
-            throws OAuthValidationException
-    {
-        isProviderConfigured();
-
-        final String currentInternalToken = generateInternalToken(packet, client.getAccessToken());
-        if (!currentInternalToken.equals(client.getInternalToken()))
-            throw new OAuthValidationException(currentInternalToken, client.getInternalToken());
-    }
-
-    public void verifyLifetime()
-    {
-        isProviderConfigured();
-
-        if (this.clients.isEmpty())
-            return;
-
-        final List<OAuthClient> clientList = new ArrayList<>(this.clients.values());
-        final long currentTime = TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis());
-        OAuthClient previousClient = null;
-
-        clientList.sort(OAuthClient::compareTo);
-        for (OAuthClient client : clientList)
-        {
-            boolean isObsolete = client.isObsolete(currentTime);
-
-            if (previousClient != null &&
-                    client.getUserIdentifier() != null &&
-                    previousClient.getUserIdentifier().equals(client.getUserIdentifier()))
-                destroyClient(previousClient.getInternalToken());
-            if (isObsolete)
-                destroyClient(client.getInternalToken());
-
-            previousClient = isObsolete ? null : client;
-        }
-    }
-
-
-    // OAuthPacket
+    //region OAuthPacket
     public static class OAuthPacket
     {
         private String remoteAddr;
@@ -349,16 +362,17 @@ public class OAuthService
 
         return new OAuthPacket(remoteAddr, originUri, internalKey, cookieManager);
     }
+    //endregion
 
-    //OAuthDataProvided
-    public static class OAuthDataProvided
+    //region OAuthProviderResponse
+    public static class OAuthProviderResponse
     {
         final OAuthClient client;
         final URI redirectUri;
         final Map<String, String> headers;
         final String body;
 
-        public OAuthDataProvided(OAuthClient client, URI redirectUri, Map<String, String> headers, String body)
+        public OAuthProviderResponse(OAuthClient client, URI redirectUri, Map<String, String> headers, String body)
         {
             this.client = client;
             this.redirectUri = redirectUri;
@@ -386,4 +400,5 @@ public class OAuthService
             return body;
         }
     }
+    //endregion
 }

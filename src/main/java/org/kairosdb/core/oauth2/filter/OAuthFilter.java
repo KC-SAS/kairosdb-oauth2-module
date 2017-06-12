@@ -45,10 +45,6 @@ public class OAuthFilter implements Filter
             if (client != null && client.isAuthenticated())
                 return true;
 
-            if (client == null)
-                logger.warn("User not found");
-            else
-                logger.warn("User name: " + client.getUserIdentifier());
             authenticateClient(requestPacket, httpRequest, httpResponse);
             return false;
 
