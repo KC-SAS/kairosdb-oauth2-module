@@ -54,9 +54,9 @@ public class OAuthService
                         OAuthCookieManager cookieManager,
                         Properties properties)
     {
-        this.clientId = (String) properties.get(CLIENT_ID_PREFIX);
-        this.clientSecret = (String) properties.get(CLIENT_SECRET_PREFIX);
-        this.redirectUri = (String) properties.get(REDIRECTION_URI_PREFIX);
+        this.clientId = properties.getProperty(CLIENT_ID_PREFIX);
+        this.clientSecret = properties.getProperty(CLIENT_SECRET_PREFIX);
+        this.redirectUri = properties.getProperty(REDIRECTION_URI_PREFIX);
         this.cookieManager = cookieManager;
         this.provider = provider.setup(properties);
     }

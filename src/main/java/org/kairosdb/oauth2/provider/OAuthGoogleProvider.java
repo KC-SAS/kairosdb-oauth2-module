@@ -71,7 +71,7 @@ public class OAuthGoogleProvider implements OAuthProvider
     @Override
     public OAuthProvider setup(Properties properties) throws OAuthConfigurationException
     {
-        this.scope = (String) properties.get(GOOGLE_SCOPE_PREFIX);
+        this.scope = properties.getProperty(GOOGLE_SCOPE_PREFIX);
         return this;
     }
 
@@ -127,10 +127,9 @@ public class OAuthGoogleProvider implements OAuthProvider
     ) throws OAuthFlowException
     {
         logger.info(String.format(
-                "Finish authentication from '%s' ('%s').",
-                concatUri(oAuthenticatingClient.getOriginUri()),
-                oAuthenticatingClient.getAccessToken())
-        );
+                "Finish authentication from '%s'.",
+                concatUri(oAuthenticatingClient.getOriginUri())
+        ));
 
         try
         {
