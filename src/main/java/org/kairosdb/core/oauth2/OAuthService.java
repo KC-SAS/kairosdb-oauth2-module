@@ -59,6 +59,7 @@ public class OAuthService
         this.redirectUri = properties.getProperty(REDIRECTION_URI_PREFIX);
         this.cookieManager = cookieManager;
         this.provider = provider.setup(properties);
+        logger.info(String.format("OAuth2 service initialized with '%s'", this.provider.getClass().getName()));
     }
 
 

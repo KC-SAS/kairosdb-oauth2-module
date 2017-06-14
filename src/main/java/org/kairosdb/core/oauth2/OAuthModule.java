@@ -4,24 +4,23 @@ import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.servlet.ServletModule;
 import org.kairosdb.core.oauth2.cookie.OAuthCookieManager;
-import org.kairosdb.core.oauth2.filter.OAuthBaseFilter;
 import org.kairosdb.core.oauth2.filter.OAuthFilter;
+import org.kairosdb.core.oauth2.filter.OAuthRootFilter;
 import org.kairosdb.core.oauth2.provider.OAuthProvider;
 import org.kairosdb.core.oauth2.ressource.OAuthAuthorizeRessource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.Filter;
-import java.util.*;
+import java.util.HashSet;
+import java.util.Properties;
+import java.util.Set;
 
 public class OAuthModule extends ServletModule
 {
     private final static String FILTER_PREFIX = "kairosdb.oauth2.filters.";
     private final static String PROVIDER_PREFIX = "kairosdb.oauth2.provider";
     private final static String COOKIE_PREFIX = "kairosdb.oauth2.cookie_manager";
-
-    private final static String REQUIRED_NOTFOUND = "Module '%s' required.";
-    private final static String LOAD_FAILURE = "Unable to load module '%s': %s";
 
     private final Logger logger = LoggerFactory.getLogger(OAuthModule.class);
     private final ClassLoader classLoader = this.getClass().getClassLoader();
@@ -35,19 +34,20 @@ public class OAuthModule extends ServletModule
     @Override
     protected void configureServlets()
     {
-        bind(OAuthBaseFilter.class).in(Singleton.class);
+        bind(OAuthRootFilter.class).in(Singleton.class);
         bind(OAuthAuthorizeRessource.class).in(Singleton.class);
         bind(OAuthService.class).in(Singleton.class);
 
-        bind(OAuthBaseFilter.Post.class);
-        bind(OAuthBaseFilter.Get.class);
-        bind(OAuthBaseFilter.Put.class);
-        bind(OAuthBaseFilter.Patch.class);
-        bind(OAuthBaseFilter.Delete.class);
+        bind(OAuthRootFilter.Post.class).in(Singleton.class);
+        bind(OAuthRootFilter.Get.class).in(Singleton.class);
+        bind(OAuthRootFilter.Put.class).in(Singleton.class);
+        bind(OAuthRootFilter.Patch.class).in(Singleton.class);
+        bind(OAuthRootFilter.Delete.class).in(Singleton.class);
 
         bind(OAuthProvider.class).to(loadRequiredModule(PROVIDER_PREFIX, OAuthProvider.class)).in(Singleton.class);
         bind(OAuthCookieManager.class).to(loadRequiredModule(COOKIE_PREFIX, OAuthCookieManager.class)).in(Singleton.class);
 
+        logger.info("OAuth2 Module initialized");
         configureFilter();
     }
 
@@ -56,7 +56,7 @@ public class OAuthModule extends ServletModule
     {
         String className = properties.getProperty(prefix);
         if (className == null)
-            logger.error(String.format(REQUIRED_NOTFOUND, prefix));
+            logger.error(String.format("Module '%s' required.", prefix));
         return loadModule(className, originClazz);
     }
 
@@ -72,15 +72,15 @@ public class OAuthModule extends ServletModule
                 return (Class<? extends T>) clazz;
 
             String failureMessage = String.format("Invalid class, must extend '%s'", originClazz.getName());
-            logger.error(String.format(LOAD_FAILURE, className, failureMessage));
+            logger.error(String.format("Unable to load module '%s': %s", className, failureMessage));
 
         } catch (ClassNotFoundException e)
         {
-            logger.error(String.format(LOAD_FAILURE, className, "Class not found"));
+            logger.error(String.format("Unable to load module '%s': %s", className, "Class not found"));
 
         } catch (Exception e)
         {
-            logger.error(String.format(LOAD_FAILURE, className, e.getMessage()));
+            logger.error(String.format("Unable to load module '%s': %s", className, e.getMessage()));
         }
         return null;
     }
@@ -107,65 +107,67 @@ public class OAuthModule extends ServletModule
     {
         Class<? extends OAuthFilter> clazz = loadModule(properties.getProperty(property), OAuthFilter.class);
         if (clazz != null)
+        {
             oAuthFilters.addBinding().to(clazz);
+            logger.info(String.format("\tCharge filter module '%s'", clazz.getName()));
+        }
     }
 
     private void configurePath(String property)
     {
         String path = null;
-        Set<Class<? extends Filter>> filters = new HashSet<>();
+        Set<MethodFilter> filterSet = new HashSet<>();
 
-        for (String item : properties.getProperty(property).split("|"))
+        for (String item : properties.getProperty(property).split("\\|"))
         {
             try
             {
-                switch (MethodFilter.valueOf(item.toUpperCase()))
-                {
-                    case POST:
-                        filters.add(MethodFilter.POST.toClass());
-                        break;
-                    case GET:
-                        filters.add(MethodFilter.GET.toClass());
-                        break;
-                    case PUT:
-                        filters.add(MethodFilter.PUT.toClass());
-                        break;
-                    case PATCH:
-                        filters.add(MethodFilter.PATCH.toClass());
-                        break;
-                    case DELETE:
-                        filters.add(MethodFilter.DELETE.toClass());
-                        break;
-                }
-            }
-            catch (IllegalArgumentException e)
+                MethodFilter methodFilter = MethodFilter.valueOf(item.toUpperCase());
+                filterSet.add(methodFilter);
+            } catch (IllegalArgumentException e)
             {
                 path = item;
             }
         }
 
-        if (path == null) return;
+        if (path == null)
+            return;
 
-        if (!filters.isEmpty())
-            for (Class<? extends Filter> filter : filters)
-                filter(path).through(filter);
-        else
-            filter(path).through(MethodFilter.GET.toClass());
+        try
+        {
+            StringBuilder filterDesc = new StringBuilder();
+            if (!filterSet.isEmpty())
+            {
+                for (MethodFilter filter : filterSet)
+                {
+                    filter(path).through(filter.toClass());
+                    filterDesc.append(filter.toString()).append(" ");
+                }
+            } else
+            {
+                filter(path).through(MethodFilter.GET.toClass());
+                filterDesc.append("GET");
+            }
+            logger.info(String.format("\tNew filter on '%s' (%s)", path, filterDesc.toString().trim()));
+        } catch (Exception e)
+        {
+            logger.error(String.format("\tFilter path '%s' not valid (%s)", path, e.getMessage()));
+        }
     }
     //endregion
 
     enum MethodFilter
     {
-        POST(OAuthBaseFilter.Post.class),
-        GET(OAuthBaseFilter.Get.class),
-        PUT(OAuthBaseFilter.Put.class),
-        PATCH(OAuthBaseFilter.Patch.class),
-        DELETE(OAuthBaseFilter.Delete.class);
+        POST(OAuthRootFilter.Post.class),
+        GET(OAuthRootFilter.Get.class),
+        PUT(OAuthRootFilter.Put.class),
+        PATCH(OAuthRootFilter.Patch.class),
+        DELETE(OAuthRootFilter.Delete.class);
 
 
         private final Class<? extends Filter> filter;
 
-        private MethodFilter(Class<? extends Filter> filter)
+        MethodFilter(Class<? extends Filter> filter)
         {
             this.filter = filter;
         }
