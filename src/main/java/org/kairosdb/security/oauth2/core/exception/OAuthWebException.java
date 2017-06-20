@@ -1,4 +1,4 @@
-package org.kairosdb.core.oauth2.exceptions;
+package org.kairosdb.security.oauth2.core.exception;
 
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
