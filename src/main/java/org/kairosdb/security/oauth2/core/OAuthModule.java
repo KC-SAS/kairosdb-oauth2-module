@@ -1,9 +1,9 @@
 package org.kairosdb.security.oauth2.core;
 
 import com.google.inject.AbstractModule;
-import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
+import com.google.inject.name.Names;
 import org.kairosdb.security.auth.AuthenticationModule;
 import org.kairosdb.security.auth.core.FilterManager;
 import org.kairosdb.security.auth.core.Utils;
@@ -15,19 +15,20 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.function.Consumer;
 
-import static org.kairosdb.security.auth.core.Utils.filterFrom;
+import static org.kairosdb.security.auth.core.Utils.filtersFrom;
 
 public class OAuthModule extends AbstractModule implements AuthenticationModule
 {
-    private final static String FILTER_PATH_PREFIX = "kairosdb.security.oauth2.filter_path.";
-    private final static String MODULE_PREFIX = "kairosdb.security.oauth2.modules.";
-    private final static String PROVIDER_PREFIX = "kairosdb.security.oauth2.provider";
-    private final static String COOKIE_PREFIX = "kairosdb.security.oauth2.cookie_manager";
+    private static final String FILTER_PATH_PREFIX = "kairosdb.security.oauth2.filter_path.";
+    private static final String MODULE_PREFIX = "kairosdb.security.oauth2.modules.";
+    private static final String PROVIDER_PREFIX = "kairosdb.security.oauth2.provider";
+    private static final String COOKIE_PREFIX = "kairosdb.security.oauth2.cookie.manager";
+    private static final String COOKIE_NAME_PREFIX = "kairosdb.security.oauth2.cookie.name";
+    private static final String RESPONSE_WEIGHT_PREFIX = "kairosdb.security.oauth2.response_weight";
 
-    private final Logger logger = LoggerFactory.getLogger(OAuthModule.class);
+    private static final Logger logger = LoggerFactory.getLogger(OAuthModule.class);
     private final Properties properties;
 
-    @Inject
     public OAuthModule(Properties properties)
     {
         this.properties = properties;
@@ -43,18 +44,31 @@ public class OAuthModule extends AbstractModule implements AuthenticationModule
         bind(OAuthProvider.class).to(requiredModule(PROVIDER_PREFIX, OAuthProvider.class)).in(Singleton.class);
         bind(OAuthCookieManager.class).to(requiredModule(COOKIE_PREFIX, OAuthCookieManager.class)).in(Singleton.class);
 
+        String cookieName = properties.getProperty(COOKIE_NAME_PREFIX);
+        if (cookieName == null || cookieName.isEmpty())
+            cookieName = "oauthToken";
+        bind(String.class).annotatedWith(Names.named("cookie_name")).toInstance(cookieName);
+
+        try
+        {
+            String responseWeight = properties.getProperty(RESPONSE_WEIGHT_PREFIX);
+            bind(int.class).annotatedWith(Names.named("response_weight")).toInstance(Integer.parseInt(responseWeight));
+        } catch (Exception ignore)
+        {
+            bind(int.class).annotatedWith(Names.named("response_weight")).toInstance(1024);
+        }
+
         bindPlugins();
-        logger.info("OAuth2: Module initialized");
+        logger.info("OAuth2 authentication initialized");
     }
 
     @Override
     public void configure(Properties properties, FilterManager filterManager)
     {
-        logger.info("Configuration du l'oauth");
-        Set<Consumer<FilterManager>> filter = filterFrom(properties, FILTER_PATH_PREFIX, OAuthFilter.class);
-        logger.info(String.format("%d filter found", filter.size()));
+        Set<Consumer<FilterManager>> filter = filtersFrom(properties, FILTER_PATH_PREFIX, OAuthFilter.class);
+        logger.info(String.format("%d filter(s) found", filter.size()));
         filter.forEach(f -> f.accept(filterManager));
-        logger.info("OAuth2: Module configured");
+        logger.info("OAuth2 authentication configured");
     }
 
     private void bindPlugins()

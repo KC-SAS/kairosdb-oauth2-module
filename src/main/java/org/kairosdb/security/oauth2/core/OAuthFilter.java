@@ -1,9 +1,11 @@
 package org.kairosdb.security.oauth2.core;
 
 import com.google.inject.Inject;
+import com.google.inject.name.Named;
 import org.kairosdb.security.auth.AuthenticationFilter;
 import org.kairosdb.security.auth.core.exception.UnauthorizedClientResponse;
 import org.kairosdb.security.oauth2.core.client.OAuthClient;
+import org.kairosdb.security.oauth2.core.client.OAuthenticatedClient;
 import org.kairosdb.security.oauth2.core.exception.OAuthFlowException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,17 +19,13 @@ import java.util.Set;
 
 public class OAuthFilter implements AuthenticationFilter
 {
-    private static final int responseWeight = 1024;
     private static final Logger logger = LoggerFactory.getLogger(OAuthFilter.class);
+
     private boolean pluginsConfigured;
     @Inject private Properties properties;
     @Inject private OAuthService oAuthService;
     @Inject private Set<OAuthPlugin> plugins;
-
-    public OAuthFilter()
-    {
-        logger.warn("OAuthFilter Created");
-    }
+    @Inject @Named("response_weight") private int responseWeight;
 
     @Override
     public boolean tryAuthentication(HttpServletRequest httpRequest) throws UnauthorizedClientResponse
@@ -36,14 +34,12 @@ public class OAuthFilter implements AuthenticationFilter
             plugins.forEach(p -> p.configure(properties));
         pluginsConfigured = true;
 
-        logger.info("OAuth: Try authentication");
         final OAuthClient oAuthClient = authorizedClient(httpRequest);
         if (oAuthClient == null)
             return false;
-        logger.info("OAuth: User authenticated");
 
         for (OAuthPlugin plugin : plugins)
-            if (!plugin.isAllowed(oAuthClient, httpRequest))
+            if (!plugin.isAllowed((OAuthenticatedClient) oAuthClient, httpRequest))
                 return false;
         return true;
     }
@@ -52,7 +48,7 @@ public class OAuthFilter implements AuthenticationFilter
     {
         try
         {
-            URI redirectUri = new URI(oAuthService.getRedirectionUri());
+            final URI redirectUri = new URI(oAuthService.getRedirectionUri());
             if (httpRequest.getRequestURI().equals(redirectUri.getPath()))
                 return null;
 
@@ -81,10 +77,11 @@ public class OAuthFilter implements AuthenticationFilter
     private void authenticateClient(OAuthService.OAuthPacket requestPacket, HttpServletRequest httpRequest)
             throws URISyntaxException, UnauthorizedClientResponse, OAuthFlowException
     {
-        final OAuthService.OAuthPacket responsePacket = oAuthService
-                .startAuthentication(requestPacket, new URI(httpRequest.getRequestURI()));
-        logger.warn(String.format("'%s' not allowed to access to '%s'.", requestPacket.getRemoteAddr(), httpRequest
-                .getRequestURI()));
+        final String requestUri = httpRequest.getRequestURI();
+        logger.warn(String.format("'%s' not allowed to access to '%s'.", requestPacket.getRemoteAddr(), requestUri));
+
+        final OAuthService.OAuthPacket responsePacket;
+        responsePacket = oAuthService.startAuthentication(requestPacket, new URI(requestUri));
 
         throw new UnauthorizedClientResponse(responseWeight, responsePacket::toResponse);
     }

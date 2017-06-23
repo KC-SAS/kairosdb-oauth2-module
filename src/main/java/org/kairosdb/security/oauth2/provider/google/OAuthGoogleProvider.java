@@ -97,7 +97,7 @@ public class OAuthGoogleProvider implements OAuthProvider
     public OAuthService.OAuthProviderResponse startAuthentication(URI originUri)
             throws OAuthFlowException
     {
-        logger.info(String.format("Start authentication from '%s'.", concatUri(originUri)));
+        logger.debug(String.format("Start authentication from '%s'.", concatUri(originUri)));
 
         try
         {
@@ -105,7 +105,7 @@ public class OAuthGoogleProvider implements OAuthProvider
             final URI redirectUri = new URI(oAuthClientRequest.getLocationUri());
             final OAuthGoogleClient googleClient = new OAuthGoogleClient(originUri);
 
-            logger.info(String.format("Redirect user to '%s'.", concatUri(originUri)));
+            logger.debug(String.format("Redirect user to '%s'.", concatUri(redirectUri)));
             return new OAuthService.OAuthProviderResponse(
                     googleClient,
                     redirectUri,
@@ -126,7 +126,7 @@ public class OAuthGoogleProvider implements OAuthProvider
             Function<String, String> internalTokenGenerator
     ) throws OAuthFlowException
     {
-        logger.info(String.format(
+        logger.debug(String.format(
                 "Finish authentication from '%s'.",
                 concatUri(oAuthenticatingClient.getOriginUri())
         ));
@@ -145,7 +145,7 @@ public class OAuthGoogleProvider implements OAuthProvider
                     .setUserIdentifier(getUserIdentifier(oAuthClient, accessToken))
                     .build();
 
-            logger.info(String.format("User '%s' authenticated", authenticatedClient.getUserIdentifier()));
+            logger.debug(String.format("User '%s' authenticated", authenticatedClient.getUserIdentifier()));
             return new OAuthService.OAuthProviderResponse(
                     authenticatedClient,
                     oAuthenticatingClient.getOriginUri(),
