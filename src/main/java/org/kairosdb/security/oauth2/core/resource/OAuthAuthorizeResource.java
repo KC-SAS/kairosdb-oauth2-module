@@ -1,4 +1,4 @@
-package org.kairosdb.security.oauth2.core.ressource;
+package org.kairosdb.security.oauth2.core.resource;
 
 import com.google.inject.Inject;
 import org.kairosdb.security.oauth2.core.OAuthService;
@@ -18,13 +18,17 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 @Path("/api/oauth2")
-public class OAuthAuthorizeRessource
+public class OAuthAuthorizeResource
 {
-    private final static Logger logger = LoggerFactory.getLogger(OAuthAuthorizeRessource.class);
-    @Context
-    private HttpServletRequest httpRequest;
+    private final static Logger logger = LoggerFactory.getLogger(OAuthAuthorizeResource.class);
+    @Context private HttpServletRequest httpRequest;
+    private final OAuthService oAuthService;
+
     @Inject
-    private OAuthService oAuthService;
+    public OAuthAuthorizeResource(OAuthService oAuthService)
+    {
+        this.oAuthService = oAuthService;
+    }
 
     @GET
     @Path("authorize")
@@ -33,7 +37,8 @@ public class OAuthAuthorizeRessource
     {
         try
         {
-            final OAuthService.OAuthPacket requestPacket = OAuthService.packetFrom(httpRequest, oAuthService.getCookieManager());
+            final OAuthService.OAuthPacket requestPacket = OAuthService
+                    .packetFrom(httpRequest, oAuthService.getCookieManager());
             final OAuthClient client = oAuthService.getClient(requestPacket);
 
             if (client == null || client.isAuthenticated())

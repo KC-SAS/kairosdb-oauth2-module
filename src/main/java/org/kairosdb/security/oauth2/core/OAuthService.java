@@ -155,7 +155,6 @@ public class OAuthService
         addClient(oAuthClient);
 
         oAuthPacket.setHeaders(providerResponse.getHeaders());
-        oAuthPacket.setBody(providerResponse.getBody());
         return oAuthPacket;
     }
 
@@ -199,7 +198,6 @@ public class OAuthService
         addClient(oAuthClient);
 
         oAuthPacket.setHeaders(providerResponse.getHeaders());
-        oAuthPacket.setBody(providerResponse.getBody());
         return oAuthPacket;
     }
     //endregion
@@ -300,7 +298,6 @@ public class OAuthService
 
         private URI redirectUri;
         private Map<String, String> requestHeaders;
-        private String requestBody;
 
 
         OAuthPacket(String remoteAddr, URI redirectUri, String internalToken, OAuthCookieManager cookieManager)
@@ -312,14 +309,9 @@ public class OAuthService
         }
 
 
-        void setHeaders(Map<String, String> headers)
+        public void setHeaders(Map<String, String> headers)
         {
             this.requestHeaders = headers;
-        }
-
-        void setBody(String body)
-        {
-            this.requestBody = body;
         }
 
         public String getRemoteAddr()
@@ -338,6 +330,8 @@ public class OAuthService
         {
             this.cookieManager.insertInternalToken(response, this.internalToken);
             response.sendRedirect(this.redirectUri.toString());
+            if (requestHeaders != null)
+                requestHeaders.forEach(response::addHeader);
             return response;
         }
 
@@ -347,7 +341,8 @@ public class OAuthService
                 response = Response.temporaryRedirect(this.redirectUri);
             else
                 response.status(Response.Status.TEMPORARY_REDIRECT).location(this.redirectUri);
-
+            if (requestHeaders != null)
+                requestHeaders.forEach(response::header);
             return this.cookieManager.insertInternalToken(response, this.internalToken);
         }
     }
@@ -369,14 +364,12 @@ public class OAuthService
         final OAuthClient client;
         final URI redirectUri;
         final Map<String, String> headers;
-        final String body;
 
-        public OAuthProviderResponse(OAuthClient client, URI redirectUri, Map<String, String> headers, String body)
+        public OAuthProviderResponse(OAuthClient client, URI redirectUri, Map<String, String> headers)
         {
             this.client = client;
             this.redirectUri = redirectUri;
             this.headers = headers;
-            this.body = body;
         }
 
         public OAuthClient getClient()
@@ -392,11 +385,6 @@ public class OAuthService
         public Map<String, String> getHeaders()
         {
             return headers;
-        }
-
-        public String getBody()
-        {
-            return body;
         }
     }
     //endregion

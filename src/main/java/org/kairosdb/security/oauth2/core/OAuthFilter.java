@@ -22,10 +22,22 @@ public class OAuthFilter implements AuthenticationFilter
     private static final Logger logger = LoggerFactory.getLogger(OAuthFilter.class);
 
     private boolean pluginsConfigured;
-    @Inject private Properties properties;
-    @Inject private OAuthService oAuthService;
-    @Inject private Set<OAuthPlugin> plugins;
-    @Inject @Named("response_weight") private int responseWeight;
+    private final Properties properties;
+    private final OAuthService oAuthService;
+    private final Set<OAuthPlugin> plugins;
+    private final int responseWeight;
+
+    @Inject
+    public OAuthFilter(Properties properties,
+                       OAuthService oAuthService,
+                       Set<OAuthPlugin> plugins,
+                       @Named("response_weight") int responseWeight)
+    {
+        this.properties = properties;
+        this.oAuthService = oAuthService;
+        this.plugins = plugins;
+        this.responseWeight = responseWeight;
+    }
 
     @Override
     public boolean tryAuthentication(HttpServletRequest httpRequest) throws UnauthorizedClientResponse

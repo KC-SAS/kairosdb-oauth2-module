@@ -13,7 +13,7 @@ public abstract class OAuthenticatingClient implements OAuthClient
     {
         this.temporaryToken = temporaryToken;
         this.originUri = originUri;
-        this.endTime = TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis()) + TimeUnit.MINUTES.toSeconds(lifeTime);
+        this.endTime = TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis()) + lifeTime;
     }
 
 
@@ -29,12 +29,12 @@ public abstract class OAuthenticatingClient implements OAuthClient
 
     public String getAccessToken()
     {
-        return null;
+        return "";
     }
 
     public String getUserIdentifier()
     {
-        return null;
+        return "";
     }
 
     public boolean isAuthenticated()

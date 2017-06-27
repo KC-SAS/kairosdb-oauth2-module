@@ -15,4 +15,14 @@ public class OAuthWebException extends WebApplicationException
                 .build()
         );
     }
+
+    public OAuthWebException(Response.Status status, String message, MediaType mediaType)
+    {
+        super(Response
+                .status(status)
+                .entity(message)
+                .type(mediaType)
+                .build()
+        );
+    }
 }

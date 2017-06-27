@@ -52,12 +52,12 @@ public final class OAuthenticatedClient implements OAuthClient
     public int compareTo(OAuthClient anotherClient)
     {
         if (!(anotherClient instanceof OAuthenticatedClient))
-            return 0;
+            return 1;
 
         final OAuthenticatedClient client = (OAuthenticatedClient) anotherClient;
         if (!userIdentifier.equals(client.userIdentifier))
             return userIdentifier.compareTo(client.userIdentifier);
-        return (startTime - client.startTime <= 0) ? -1 : 1;
+        return (startTime - client.startTime <= 0) ? 1 : -1;
     }
 
     public static class Builder

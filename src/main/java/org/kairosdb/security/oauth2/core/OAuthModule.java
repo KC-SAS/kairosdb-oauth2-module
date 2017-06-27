@@ -7,7 +7,7 @@ import com.google.inject.name.Names;
 import org.kairosdb.security.auth.AuthenticationModule;
 import org.kairosdb.security.auth.core.FilterManager;
 import org.kairosdb.security.auth.core.Utils;
-import org.kairosdb.security.oauth2.core.ressource.OAuthAuthorizeRessource;
+import org.kairosdb.security.oauth2.core.resource.OAuthAuthorizeResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,7 +37,7 @@ public class OAuthModule extends AbstractModule implements AuthenticationModule
     @Override
     protected void configure()
     {
-        bind(OAuthAuthorizeRessource.class).in(Singleton.class);
+        bind(OAuthAuthorizeResource.class).in(Singleton.class);
         bind(OAuthService.class).asEagerSingleton();
         bind(OAuthFilter.class).in(Singleton.class);
 

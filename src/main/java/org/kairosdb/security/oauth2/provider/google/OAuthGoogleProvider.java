@@ -109,8 +109,7 @@ public class OAuthGoogleProvider implements OAuthProvider
             return new OAuthService.OAuthProviderResponse(
                     googleClient,
                     redirectUri,
-                    oAuthClientRequest.getHeaders(),
-                    oAuthClientRequest.getBody()
+                    oAuthClientRequest.getHeaders()
             );
 
         } catch (Exception e)
@@ -120,11 +119,10 @@ public class OAuthGoogleProvider implements OAuthProvider
     }
 
     @Override
-    public OAuthService.OAuthProviderResponse finishAuthentication(
-            OAuthenticatingClient oAuthenticatingClient,
-            String code, String state,
-            Function<String, String> internalTokenGenerator
-    ) throws OAuthFlowException
+    public OAuthService.OAuthProviderResponse finishAuthentication(OAuthenticatingClient oAuthenticatingClient,
+                                                     String code, String state,
+                                                     Function<String, String> internalTokenGenerator)
+            throws OAuthFlowException
     {
         logger.debug(String.format(
                 "Finish authentication from '%s'.",
@@ -149,7 +147,6 @@ public class OAuthGoogleProvider implements OAuthProvider
             return new OAuthService.OAuthProviderResponse(
                     authenticatedClient,
                     oAuthenticatingClient.getOriginUri(),
-                    null,
                     null
             );
         } catch (Exception e)
