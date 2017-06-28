@@ -288,7 +288,7 @@ public class OAuthService
                         previousClient = isObsolete ? null : client;
                     }
                 }
-                logger.info("%d obsoleted client cleaned", numClientCleaned);
+                logger.info(String.format("%d obsoleted client cleaned", numClientCleaned));
             }
         } catch (Exception e)
         {
@@ -368,6 +368,20 @@ public class OAuthService
             if (requestHeaders != null)
                 requestHeaders.forEach(response::header);
             return this.cookieManager.insertInternalToken(response, this.internalToken);
+        }
+
+        @Override
+        public boolean equals(Object target)
+        {
+            return target != null && target instanceof OAuthPacket && equals((OAuthPacket) target);
+        }
+
+        boolean equals(OAuthPacket target)
+        {
+            return Objects.equals(requestHeaders, target.requestHeaders) &&
+                    Objects.equals(redirectUri, target.redirectUri) &&
+                    Objects.equals(internalToken, target.internalToken) &&
+                    Objects.equals(cookieManager, target.cookieManager);
         }
     }
 
