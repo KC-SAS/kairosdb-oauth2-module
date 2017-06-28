@@ -60,7 +60,7 @@ public class OAuthService
         this.provider = provider.setup(properties);
         logger.info(String.format("OAuth2 service initialized with '%s'", this.provider.getClass().getName()));
 
-        new Thread(this::deamonCleaner, "OAuthCleaner").start();
+        new Thread(this::daemonCleaner, "OAuthCleaner").start();
     }
 
 
@@ -244,7 +244,7 @@ public class OAuthService
         return client;
     }
 
-    private void deamonCleaner()
+    private void daemonCleaner()
     {
         logger.info("Start oauth client cleaner");
         try
