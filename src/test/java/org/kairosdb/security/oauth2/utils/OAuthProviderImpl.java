@@ -69,7 +69,7 @@ public class OAuthProviderImpl implements OAuthProvider
                 .setAccessToken(accessToken)
                 .setInternalToken(internalTokenGenerator.apply(accessToken))
                 .setUserIdentifier(UUID.randomUUID().toString())
-                .setExpireIn(0)
+                .setExpireIn(3600)
                 .build();
 
         try
