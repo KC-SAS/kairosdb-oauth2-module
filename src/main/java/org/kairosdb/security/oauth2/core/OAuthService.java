@@ -251,6 +251,7 @@ public class OAuthService
         {
             while (true)
             {
+                int totalClient = this.clients.size();
                 int numClientCleaned = 0;
 
                 Thread.sleep(TIME_BEFORE_CLEAN);
@@ -288,7 +289,7 @@ public class OAuthService
                         previousClient = isObsolete ? null : client;
                     }
                 }
-                logger.info(String.format("%d obsoleted client cleaned", numClientCleaned));
+                logger.info(String.format("%d/%d obsoleted client cleaned", numClientCleaned, totalClient));
             }
         } catch (Exception e)
         {
