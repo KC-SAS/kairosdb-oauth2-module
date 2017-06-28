@@ -77,12 +77,12 @@ public class OAuthFilter implements AuthenticationFilter
         } catch (UnauthorizedClientResponse unauthorizedClient)
         {
             throw unauthorizedClient;
-        } catch (Exception e)
+        } catch (Exception exception)
         {
-            logger.error(e.getMessage(), e);
+            logger.error(exception.getMessage(), exception);
             throw new UnauthorizedClientResponse(responseWeight,
-                    response -> response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage())
-            );
+                    response -> response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, exception.getMessage()),
+                    exception);
         }
     }
 

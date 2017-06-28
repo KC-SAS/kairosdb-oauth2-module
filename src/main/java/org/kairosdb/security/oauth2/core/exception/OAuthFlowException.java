@@ -11,8 +11,8 @@ public class OAuthFlowException extends Exception
         super(String.format(INTERRUPTED_FLOW, message));
     }
 
-    public OAuthFlowException(Exception e)
+    public OAuthFlowException(Throwable cause)
     {
-        super(String.format(INTERNAL_EXCEPTION, e.getClass().getName(), e.getMessage()));
+        super(String.format(INTERNAL_EXCEPTION, cause.getClass().getName(), cause.getMessage()));
     }
 }

@@ -82,7 +82,7 @@ public class OAuthGoogleProvider implements OAuthProvider
             throw new OAuthConfigurationException(GOOGLE_SCOPE_PREFIX);
         authRequestBuilder.setScope(scope);
 
-        logger.info(String.format("%s is now configured.", getClass().getName()));
+        logger.debug(String.format("%s is now configured.", getClass().getName()));
         isConfigured = true;
     }
 

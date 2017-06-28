@@ -10,8 +10,8 @@ public class OAuthConfigurationException extends IllegalArgumentException
         super(String.format(INVALID_PROPERTY_FILE, propertyPrefix));
     }
 
-    public OAuthConfigurationException(Exception e)
+    public OAuthConfigurationException(Throwable cause)
     {
-        super(String.format(INTERNAL_EXCEPTION, e.getClass().getName(), e.getMessage()), e);
+        super(String.format(INTERNAL_EXCEPTION, cause.getClass().getName(), cause.getMessage()), cause);
     }
 }
