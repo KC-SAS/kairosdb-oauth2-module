@@ -30,6 +30,7 @@ public class OAuthService
     private static final String CLIENT_ID_PREFIX = "kairosdb.security.oauth2.clientId";
     private static final String CLIENT_SECRET_PREFIX = "kairosdb.security.oauth2.clientSecret";
     private static final String REDIRECTION_URI_PREFIX = "kairosdb.security.oauth2.redirectionUri";
+    private static final long TIME_BEFORE_CLEAN = 5 * 60 * 1000;
 
     private static final String[] HeaderClientIpList =
             {
@@ -58,6 +59,8 @@ public class OAuthService
         this.cookieManager = cookieManager;
         this.provider = provider.setup(properties);
         logger.info(String.format("OAuth2 service initialized with '%s'", this.provider.getClass().getName()));
+
+        new Thread(this::deamonCleaner, "OAuthCleaner").start();
     }
 
 
@@ -68,7 +71,7 @@ public class OAuthService
             throw new OAuthConfigurationException(prefix);
     }
 
-    private static String retrieveRemoteAddress(HttpServletRequest request)
+    static String retrieveRemoteAddress(HttpServletRequest request)
     {
         String remoteAddress;
 
@@ -85,7 +88,7 @@ public class OAuthService
         return request.getRemoteAddr();
     }
 
-    private static String generateInternalToken(OAuthPacket packet, String accessToken)
+    static String generateInternalToken(OAuthPacket packet, String accessToken)
     {
         String remoteAddress = packet.remoteAddr;
 
@@ -107,7 +110,7 @@ public class OAuthService
         }
     }
 
-    private static void verifyTokenValidity(OAuthPacket packet, OAuthClient client)
+    static void verifyTokenValidity(OAuthPacket packet, OAuthClient client)
             throws OAuthValidationException
     {
         final String currentInternalToken = generateInternalToken(packet, client.getAccessToken());
@@ -241,34 +244,55 @@ public class OAuthService
         return client;
     }
 
-    public void verifyLifetime()
+    private void deamonCleaner()
     {
-        logger.info("Auto clean obsoleted user token");
-        if (this.clients.isEmpty())
-            return;
-
-        synchronized (this)
+        logger.info("Start oauth client cleaner");
+        try
         {
-            final List<OAuthClient> clientList;
-            clientList = new ArrayList<>(this.clients.values());
-
-            final long currentTime = TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis());
-            OAuthClient previousClient = null;
-
-            clientList.sort(OAuthClient::compareTo);
-            for (OAuthClient client : clientList)
+            while (true)
             {
-                boolean isObsolete = client.isObsolete(currentTime);
+                int numClientCleaned = 0;
 
-                if (previousClient != null &&
-                        client.getUserIdentifier() != null &&
-                        previousClient.getUserIdentifier().equals(client.getUserIdentifier()))
-                    removeClient(previousClient.getInternalToken());
-                if (isObsolete)
-                    removeClient(client.getInternalToken());
+                Thread.sleep(TIME_BEFORE_CLEAN);
+                if (this.clients.isEmpty())
+                    continue;
 
-                previousClient = isObsolete ? null : client;
+                synchronized (this)
+                {
+                    final List<OAuthClient> clientList;
+                    clientList = new ArrayList<>(this.clients.values());
+
+                    final long currentTime = TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis());
+                    OAuthClient previousClient = null;
+
+                    clientList.sort(OAuthClient::compareTo);
+                    for (OAuthClient client : clientList)
+                    {
+                        boolean isObsolete = client.isObsolete(currentTime);
+
+                        boolean isDuplicate = previousClient != null
+                                && client.getUserIdentifier() != null
+                                && previousClient.getUserIdentifier().equals(client.getUserIdentifier());
+
+                        if (isDuplicate)
+                        {
+                            ++numClientCleaned;
+                            removeClient(previousClient.getInternalToken());
+                        }
+                        if (isObsolete)
+                        {
+                            ++numClientCleaned;
+                            removeClient(client.getInternalToken());
+                        }
+
+                        previousClient = isObsolete ? null : client;
+                    }
+                }
+                logger.info("%d obsoleted client cleaned", numClientCleaned);
             }
+        } catch (Exception e)
+        {
+            logger.info(String.format("Stop oauth client cleaner (%s)", e.getMessage()));
         }
     }
     //endregion

@@ -1,7 +1,9 @@
 package org.kairosdb.security.oauth2.core;
 
 import com.google.inject.AbstractModule;
+import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import com.google.inject.binder.LinkedBindingBuilder;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
 import org.kairosdb.security.auth.AuthenticationModule;
@@ -24,11 +26,15 @@ public class OAuthModule extends AbstractModule implements AuthenticationModule
     private static final String PROVIDER_PREFIX = "kairosdb.security.oauth2.provider";
     private static final String COOKIE_PREFIX = "kairosdb.security.oauth2.cookie.manager";
     private static final String COOKIE_NAME_PREFIX = "kairosdb.security.oauth2.cookie.name";
-    private static final String RESPONSE_WEIGHT_PREFIX = "kairosdb.security.oauth2.response_weight";
+    private static final String RESPONSE_WEIGHT_PREFIX = "kairosdb.security.oauth2.priority_weight";
+
+    private static final String COOKIE_NAME_DEFAULT = "oauthToken";
+    private static final int RESPONSE_WEIGHT_DEFAULT = 1024;
 
     private static final Logger logger = LoggerFactory.getLogger(OAuthModule.class);
     private final Properties properties;
 
+    @Inject
     public OAuthModule(Properties properties)
     {
         this.properties = properties;
@@ -46,16 +52,21 @@ public class OAuthModule extends AbstractModule implements AuthenticationModule
 
         String cookieName = properties.getProperty(COOKIE_NAME_PREFIX);
         if (cookieName == null || cookieName.isEmpty())
+        {
+            logger.warn(String.format("%s not set, default value used ('%s')", COOKIE_NAME_PREFIX, COOKIE_NAME_DEFAULT));
             cookieName = "oauthToken";
+        }
         bind(String.class).annotatedWith(Names.named("cookie_name")).toInstance(cookieName);
 
+        LinkedBindingBuilder<Integer> response_weight = bind(int.class).annotatedWith(Names.named("response_weight"));
         try
         {
             String responseWeight = properties.getProperty(RESPONSE_WEIGHT_PREFIX);
-            bind(int.class).annotatedWith(Names.named("response_weight")).toInstance(Integer.parseInt(responseWeight));
+            response_weight.toInstance(Integer.parseInt(responseWeight));
         } catch (Exception ignore)
         {
-            bind(int.class).annotatedWith(Names.named("response_weight")).toInstance(1024);
+            logger.warn(String.format("%s not set, default value used ('%d')", RESPONSE_WEIGHT_PREFIX, RESPONSE_WEIGHT_DEFAULT));
+            response_weight.toInstance(1024);
         }
 
         bindPlugins();
@@ -103,7 +114,7 @@ public class OAuthModule extends AbstractModule implements AuthenticationModule
     {
         try
         {
-            return Utils.loadModule(className, originClazz);
+            return Utils.loadClass(className, originClazz);
 
         } catch (IllegalArgumentException ignore)
         {
