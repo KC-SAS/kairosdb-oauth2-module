@@ -117,7 +117,7 @@ _Required for the module, for any provider_
 * ``kairosdb.security.oauth2.redirectionUri`` : Redirection URI, used bu the provider to get the client information
 
 _For Google implementation_
-* ``kairosdb.security.oauth2.google.scope``=profile
+* ``kairosdb.security.oauth2.google.scope`` : Google OAuth2 scope
 
 # Path configuration _(required)_
 * ``kairosdb.security.oauth2.filters.path.AAA=XXX`` : Enable OAuth authentication on XXX
