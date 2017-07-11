@@ -84,7 +84,7 @@ public interface OAuthCookieManager
 > See the [simple cookie manager implementation](src/main/java/org/kairosdb/security/oauth2/cookie/SimpleCookieManager.java) if example is needed
 
 ### OAuthPlugin
-Finally, to add modularity and filter with precision KairosDB, you can create ``OAuthPlugin``.  
+Finally, to add modularity and filter with precision to KairosDB, you can create ``OAuthPlugin``.  
 ``OAuthPlugin``, thanks to the provider, can known unique identifiers and create a restriction for each user.
 
 ````java
@@ -107,6 +107,7 @@ How to configure
 This module can be easily configured throw the property file, read by KairosDB.
 
 ### Module configuration _(required)_
+* `kairosdb.service.oauth=org.kairosdb.security.oauth2.core.OAuthModule` : Enable the OAuth2 KairosDB service
 * `kairosdb.security.oauth2.provider` : Classpath of the provider implementation
 * `kairosdb.security.oauth2.cookie_manager` : Classpath of the cookie manager implementation
 
@@ -119,9 +120,9 @@ _Required for the module, for any provider_
 _For Google implementation_
 * ``kairosdb.security.oauth2.google.scope`` : Google OAuth2 scope
 
-# Path configuration _(required)_
+### Path configuration _(required)_
 * ``kairosdb.security.oauth2.filters.path.AAA=XXX`` : Enable OAuth authentication on XXX
-* ``kairosdb.security.oauth2.filters.path.api=/api/*|Post`` : Enable OAuth authentication on `/api/*` for `POST` method. For more information, see [authentication manager for KairosDB](https://github.com/Kratos-ISE/kairosdb-auth-manager#configuration).
+* ``kairosdb.security.oauth2.filters.path.api=/api/*|Post`` : Enable OAuth authentication on `/api/*` for `POST` method. For more information, see [authentication manager for KairosDB](https://github.com/Kratos-ISE/kairosdb-auth-manager#path-configuration-for-utilspathtofilter).
 
 License
 -------
