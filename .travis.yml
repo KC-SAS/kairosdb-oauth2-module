@@ -3,6 +3,10 @@ language: java
 jdk:
   - oraclejdk8
 
+before_install:
+  - git clone https://github.com/Kratos-ISE/kairosdb-auth-manager.git
+  - cd kairosdb-auth-manager && mvn install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
+
 install: mvn install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
 
 script:
