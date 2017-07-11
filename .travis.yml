@@ -5,8 +5,7 @@ jdk:
 
 before_install:
   - git clone https://github.com/Kratos-ISE/kairosdb-auth-manager.git
-  - cd kairosdb-auth-manager
-  - ls -lah
+  - cd kairosdb-auth-manager && git checkout develop
   - mvn install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
 
 install: mvn install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
