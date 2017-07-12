@@ -109,7 +109,8 @@ This module can be easily configured throw the property file, read by KairosDB.
 ### Module configuration _(required)_
 * `kairosdb.service.oauth=org.kairosdb.security.oauth2.core.OAuthModule` : Enable the OAuth2 KairosDB service
 * `kairosdb.security.oauth2.provider` : Classpath of the provider implementation
-* `kairosdb.security.oauth2.cookie_manager` : Classpath of the cookie manager implementation
+* `kairosdb.security.oauth2.cookie.manager` : Classpath of the cookie manager implementation
+* `kairosdb.security.oauth2.priority_weight` : Priority weight to choose which authentication use
 
 ### Provider configuration _(can changed, depends of the provider used)_
 _Required for the module, for any provider_
