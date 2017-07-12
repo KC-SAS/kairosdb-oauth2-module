@@ -21,7 +21,7 @@ import static org.kairosdb.security.auth.core.Utils.filtersFrom;
 
 public class OAuthModule extends AbstractModule implements AuthenticationModule
 {
-    private static final String FILTER_PATH_PREFIX = "kairosdb.security.oauth2.filter_path.";
+    private static final String FILTER_PATH_PREFIX = "kairosdb.security.oauth2.filters.path.";
     private static final String MODULE_PREFIX = "kairosdb.security.oauth2.modules.";
     private static final String PROVIDER_PREFIX = "kairosdb.security.oauth2.provider";
     private static final String COOKIE_PREFIX = "kairosdb.security.oauth2.cookie.manager";
