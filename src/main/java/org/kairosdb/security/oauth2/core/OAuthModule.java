@@ -4,11 +4,9 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.inject.binder.LinkedBindingBuilder;
-import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
-import org.kairosdb.security.auth.AuthenticationModule;
+import org.kairosdb.security.auth.authenticator.AuthenticatorModule;
 import org.kairosdb.security.auth.core.FilterManager;
-import org.kairosdb.security.auth.core.Utils;
 import org.kairosdb.security.oauth2.core.resource.OAuthAuthorizeResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,16 +15,19 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.function.Consumer;
 
-import static org.kairosdb.security.auth.core.Utils.filtersFrom;
+import static org.kairosdb.security.auth.utils.Filters.filtersFrom;
+import static org.kairosdb.security.auth.utils.Modules.loadClass;
 
-public class OAuthModule extends AbstractModule implements AuthenticationModule
+public class OAuthModule extends AbstractModule implements AuthenticatorModule
 {
     private static final String FILTER_PATH_PREFIX = "kairosdb.security.oauth2.filters.path.";
-    private static final String MODULE_PREFIX = "kairosdb.security.oauth2.modules.";
     private static final String PROVIDER_PREFIX = "kairosdb.security.oauth2.provider";
     private static final String COOKIE_PREFIX = "kairosdb.security.oauth2.cookie.manager";
     private static final String COOKIE_NAME_PREFIX = "kairosdb.security.oauth2.cookie.name";
     private static final String RESPONSE_WEIGHT_PREFIX = "kairosdb.security.oauth2.priority_weight";
+
+    private static final String ERR_PROPERTY_NOT_SET = "%s not set, default value used ('%s')";
+    private static final String ERR_UNABLE_TO_LOAD = "Unable to load module '%s': %s";
 
     private static final String COOKIE_NAME_DEFAULT = "oauthToken";
     private static final int RESPONSE_WEIGHT_DEFAULT = 1024;
@@ -53,7 +54,7 @@ public class OAuthModule extends AbstractModule implements AuthenticationModule
         String cookieName = properties.getProperty(COOKIE_NAME_PREFIX);
         if (cookieName == null || cookieName.isEmpty())
         {
-            logger.warn(String.format("%s not set, default value used ('%s')", COOKIE_NAME_PREFIX, COOKIE_NAME_DEFAULT));
+            logger.warn(String.format(ERR_PROPERTY_NOT_SET, COOKIE_NAME_PREFIX, COOKIE_NAME_DEFAULT));
             cookieName = "oauthToken";
         }
         bind(String.class).annotatedWith(Names.named("cookie_name")).toInstance(cookieName);
@@ -65,11 +66,10 @@ public class OAuthModule extends AbstractModule implements AuthenticationModule
             response_weight.toInstance(Integer.parseInt(responseWeight));
         } catch (Exception ignore)
         {
-            logger.warn(String.format("%s not set, default value used ('%d')", RESPONSE_WEIGHT_PREFIX, RESPONSE_WEIGHT_DEFAULT));
+            logger.warn(String.format(ERR_PROPERTY_NOT_SET, RESPONSE_WEIGHT_PREFIX, RESPONSE_WEIGHT_DEFAULT));
             response_weight.toInstance(1024);
         }
 
-        bindPlugins();
         logger.info("OAuth2 authentication initialized");
     }
 
@@ -80,25 +80,6 @@ public class OAuthModule extends AbstractModule implements AuthenticationModule
         logger.info(String.format("%d filter(s) found", filter.size()));
         filter.forEach(f -> f.accept(filterManager));
         logger.info("OAuth2 authentication configured");
-    }
-
-    private void bindPlugins()
-    {
-        Multibinder<OAuthPlugin> oAuthFilters = Multibinder.newSetBinder(binder(), OAuthPlugin.class);
-
-        for (Object okey : properties.keySet())
-        {
-            String key = okey.toString();
-            if (key.startsWith(MODULE_PREFIX))
-            {
-                Class<? extends OAuthPlugin> plugin = loadModule(properties.getProperty(key), OAuthPlugin.class);
-                if (plugin != null)
-                {
-                    logger.info(String.format("OAuth2: Load oauth plugin '%s'", plugin.getName()));
-                    oAuthFilters.addBinding().to(plugin);
-                }
-            }
-        }
     }
 
     private <T> Class<? extends T> requiredModule(String prefix, Class<T> originClazz)
@@ -114,18 +95,18 @@ public class OAuthModule extends AbstractModule implements AuthenticationModule
     {
         try
         {
-            return Utils.loadClass(className, originClazz);
+            return loadClass(className, originClazz);
 
         } catch (IllegalArgumentException ignore)
         {
 
         } catch (ClassNotFoundException e)
         {
-            logger.error(String.format("Unable to load module '%s': %s", className, "Class not found"));
+            logger.error(String.format(ERR_UNABLE_TO_LOAD, className, "Class not found"));
 
         } catch (Exception e)
         {
-            logger.error(String.format("Unable to load module '%s': %s", className, e.getMessage()));
+            logger.error(String.format(ERR_UNABLE_TO_LOAD, className, e.getMessage()));
         }
         return null;
     }

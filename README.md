@@ -83,24 +83,6 @@ public interface OAuthCookieManager
 ````
 > See the [simple cookie manager implementation](src/main/java/org/kairosdb/security/oauth2/cookie/SimpleCookieManager.java) if example is needed
 
-### OAuthPlugin
-Finally, to add modularity and filter with precision to KairosDB, you can create ``OAuthPlugin``.  
-``OAuthPlugin``, thanks to the provider, can known unique identifiers and create a restriction for each user.
-
-````java
-public interface OAuthPlugin
-{
-    /**
-     * Configure OAuth plugin with Properties
-     */
-    void configure(Properties properties);
-
-    /**
-     * Check if the user is allowed to access to resources.
-     */
-    boolean isAllowed(OAuthenticatedClient client, ServletRequest httpRequest) throws UnauthorizedClientResponse;
-}
-````
 
 How to configure
 ----------------

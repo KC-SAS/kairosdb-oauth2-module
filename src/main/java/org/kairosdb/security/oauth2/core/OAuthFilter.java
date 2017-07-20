@@ -2,77 +2,58 @@ package org.kairosdb.security.oauth2.core;
 
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
-import org.kairosdb.security.auth.AuthenticationFilter;
+import org.kairosdb.security.auth.authenticator.AuthenticatorFilter;
+import org.kairosdb.security.auth.authenticator.AuthenticatorResult;
 import org.kairosdb.security.auth.core.exception.UnauthorizedClientResponse;
+import org.kairosdb.security.oauth2.core.OAuthService.OAuthPacket;
 import org.kairosdb.security.oauth2.core.client.OAuthClient;
-import org.kairosdb.security.oauth2.core.client.OAuthenticatedClient;
 import org.kairosdb.security.oauth2.core.exception.OAuthFlowException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Properties;
-import java.util.Set;
+import java.util.Optional;
 
-public class OAuthFilter implements AuthenticationFilter
+import static javax.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
+
+public class OAuthFilter implements AuthenticatorFilter
 {
     private static final Logger logger = LoggerFactory.getLogger(OAuthFilter.class);
 
-    private boolean pluginsConfigured;
-    private final Properties properties;
     private final OAuthService oAuthService;
-    private final Set<OAuthPlugin> plugins;
     private final int responseWeight;
 
     @Inject
-    public OAuthFilter(Properties properties,
-                       OAuthService oAuthService,
-                       Set<OAuthPlugin> plugins,
-                       @Named("response_weight") int responseWeight)
+    OAuthFilter(OAuthService oAuthService, @Named("response_weight") int responseWeight)
     {
-        this.properties = properties;
         this.oAuthService = oAuthService;
-        this.plugins = plugins;
         this.responseWeight = responseWeight;
     }
 
     @Override
-    public boolean tryAuthentication(HttpServletRequest httpRequest) throws UnauthorizedClientResponse
+    public AuthenticatorResult tryAuthentication(HttpServletRequest httpRequest) throws UnauthorizedClientResponse
     {
-        if (!pluginsConfigured)
-            plugins.forEach(p -> p.configure(properties));
-        pluginsConfigured = true;
+        final Optional<OAuthClient> oAuthClient = authorizedClient(httpRequest);
 
-        final OAuthClient oAuthClient = authorizedClient(httpRequest);
-        if (oAuthClient == null)
-            return false;
-
-        for (OAuthPlugin plugin : plugins)
-            if (!plugin.isAllowed((OAuthenticatedClient) oAuthClient, httpRequest))
-                return false;
-        return true;
+        if (oAuthClient.isPresent())
+            return AuthenticatorResult.allow(oAuthClient.get().getUserIdentifier(), getClass());
+        return AuthenticatorResult.deny(getClass());
     }
 
-    private OAuthClient authorizedClient(HttpServletRequest httpRequest) throws UnauthorizedClientResponse
+    private Optional<OAuthClient> authorizedClient(HttpServletRequest httpRequest) throws UnauthorizedClientResponse
     {
         try
         {
-            final URI redirectUri = new URI(oAuthService.getRedirectionUri());
-            if (httpRequest.getRequestURI().equals(redirectUri.getPath()))
-                return null;
-
-            final OAuthService.OAuthPacket requestPacket = OAuthService
-                    .packetFrom(httpRequest, oAuthService.getCookieManager());
+            final OAuthPacket requestPacket = OAuthService.packetFrom(httpRequest, oAuthService.getCookieManager());
             final OAuthClient client = oAuthService.getClient(requestPacket);
 
             if (client != null && client.isAuthenticated())
-                return client;
+                return Optional.of(client);
 
             authenticateClient(requestPacket, httpRequest);
-            return null;
+            return Optional.empty();
 
         } catch (UnauthorizedClientResponse unauthorizedClient)
         {
@@ -80,9 +61,11 @@ public class OAuthFilter implements AuthenticationFilter
         } catch (Exception exception)
         {
             logger.error(exception.getMessage(), exception);
-            throw new UnauthorizedClientResponse(responseWeight,
-                    response -> response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, exception.getMessage()),
-                    exception);
+            throw new UnauthorizedClientResponse(
+                    responseWeight,
+                    response -> response.sendError(SC_INTERNAL_SERVER_ERROR, exception.getMessage()),
+                    exception
+            );
         }
     }
 

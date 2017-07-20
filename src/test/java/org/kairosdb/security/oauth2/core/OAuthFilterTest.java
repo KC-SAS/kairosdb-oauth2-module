@@ -9,7 +9,6 @@ import org.kairosdb.security.oauth2.utils.*;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.util.HashSet;
 
 import static org.kairosdb.security.oauth2.core.OAuthService.packetFrom;
 
@@ -26,7 +25,7 @@ public class OAuthFilterTest
         final OAuthProvider oAuthProvider = new OAuthProviderImpl();
         final OAuthCookieManager oAuthCookieManager = new OAuthCookieManagerImpl();
         final OAuthService oAuthService = new OAuthService(oAuthProvider, oAuthCookieManager, properties);
-        final OAuthFilter oAuthFilter = new OAuthFilter(null, oAuthService, new HashSet<>(), 0);
+        final OAuthFilter oAuthFilter = new OAuthFilter(oAuthService, 0);
 
         final HttpServletRequestImpl httpServletRequest = new HttpServletRequestImpl();
         final HttpServletResponseImpl httpServletResponse = new HttpServletResponseImpl();
@@ -51,7 +50,15 @@ public class OAuthFilterTest
     @Test
     public void tryAuthentication_failure() throws IOException, URISyntaxException
     {
-        final OAuthFilter oAuthFilter = new OAuthFilter(null, null, new HashSet<>(), 0);
+        final PropertiesImpl properties = new PropertiesImpl();
+        properties.addProperty("kairosdb.security.oauth2.clientId", "aaa");
+        properties.addProperty("kairosdb.security.oauth2.clientSecret", "bbb");
+        properties.addProperty("kairosdb.security.oauth2.redirectionUri", "http://google.fr");
+
+        final OAuthProvider oAuthProvider = new OAuthProviderImpl();
+        final OAuthCookieManager oAuthCookieManager = new OAuthCookieManagerImpl();
+        final OAuthService oAuthService = new OAuthService(oAuthProvider, oAuthCookieManager, properties);
+        final OAuthFilter oAuthFilter = new OAuthFilter(oAuthService, 0);
 
         try
         {
@@ -73,7 +80,7 @@ public class OAuthFilterTest
         final OAuthProvider oAuthProvider = new OAuthProviderImpl();
         final OAuthCookieManager oAuthCookieManager = new OAuthCookieManagerImpl();
         final OAuthService oAuthService = new OAuthService(oAuthProvider, oAuthCookieManager, properties);
-        final OAuthFilter oAuthFilter = new OAuthFilter(null, oAuthService, new HashSet<>(), 0);
+        final OAuthFilter oAuthFilter = new OAuthFilter(oAuthService, 0);
 
         HttpServletRequestImpl httpServletRequest = new HttpServletRequestImpl();
         HttpServletResponseImpl httpServletResponse = new HttpServletResponseImpl();
@@ -98,7 +105,7 @@ public class OAuthFilterTest
         final OAuthClient oAuthClient = oAuthService.getClient(packetFrom(httpServletRequest, oAuthCookieManager));
         Assert.assertNotNull("OAuthClient not found", oAuthClient);
         Assert.assertTrue("OAuthClient must be authenticated", oAuthClient.isAuthenticated());
-        Assert.assertTrue(oAuthFilter.tryAuthentication(httpServletRequest));
+        Assert.assertTrue(oAuthFilter.tryAuthentication(httpServletRequest).isAllowed());
     }
 
 }
