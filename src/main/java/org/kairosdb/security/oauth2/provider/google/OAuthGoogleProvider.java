@@ -13,12 +13,12 @@ import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.json.JSONObject;
+import org.kairosdb.security.oauth2.core.OAuthProvider;
 import org.kairosdb.security.oauth2.core.OAuthService;
 import org.kairosdb.security.oauth2.core.client.OAuthenticatedClient;
 import org.kairosdb.security.oauth2.core.client.OAuthenticatingClient;
 import org.kairosdb.security.oauth2.core.exception.OAuthConfigurationException;
 import org.kairosdb.security.oauth2.core.exception.OAuthFlowException;
-import org.kairosdb.security.oauth2.core.OAuthProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -120,8 +120,8 @@ public class OAuthGoogleProvider implements OAuthProvider
 
     @Override
     public OAuthService.OAuthProviderResponse finishAuthentication(OAuthenticatingClient oAuthenticatingClient,
-                                                     String code, String state,
-                                                     Function<String, String> internalTokenGenerator)
+                                                                   String code, String state,
+                                                                   Function<String, String> internalTokenGenerator)
             throws OAuthFlowException
     {
         logger.debug(String.format(

@@ -15,16 +15,18 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.function.Consumer;
 
+import static org.kairosdb.security.auth.core.AuthenticationManagerModule.KAIROSDB_SECURITY_PREFIX;
 import static org.kairosdb.security.auth.utils.Filters.filtersFrom;
 import static org.kairosdb.security.auth.utils.Modules.loadClass;
 
 public class OAuthModule extends AbstractModule implements AuthenticatorModule
 {
-    private static final String FILTER_PATH_PREFIX = "kairosdb.security.oauth2.filters.path.";
-    private static final String PROVIDER_PREFIX = "kairosdb.security.oauth2.provider";
-    private static final String COOKIE_PREFIX = "kairosdb.security.oauth2.cookie.manager";
-    private static final String COOKIE_NAME_PREFIX = "kairosdb.security.oauth2.cookie.name";
-    private static final String RESPONSE_WEIGHT_PREFIX = "kairosdb.security.oauth2.priority_weight";
+    private static final String OAUTH_PREFIX = KAIROSDB_SECURITY_PREFIX + "oauth2.";
+    private static final String RESPONSE_WEIGHT_PREFIX = OAUTH_PREFIX + "priority_weight";
+    private static final String PROVIDER_PREFIX = OAUTH_PREFIX + "provider";
+    private static final String COOKIE_PREFIX = OAUTH_PREFIX + "cookie.manager";
+    private static final String COOKIE_NAME_PREFIX = OAUTH_PREFIX + "cookie.name";
+    private static final String FILTER_PATH_PREFIX = OAUTH_PREFIX + "filters.path.";
 
     private static final String ERR_PROPERTY_NOT_SET = "%s not set, default value used ('%s')";
     private static final String ERR_UNABLE_TO_LOAD = "Unable to load module '%s': %s";

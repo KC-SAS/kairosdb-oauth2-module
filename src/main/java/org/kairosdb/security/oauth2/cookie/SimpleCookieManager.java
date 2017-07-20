@@ -15,8 +15,8 @@ import java.util.Base64;
 
 public class SimpleCookieManager implements OAuthCookieManager
 {
-    private final static Base64.Encoder base64encoder = Base64.getEncoder();
-    private final static Base64.Decoder base64decoder = Base64.getDecoder();
+    private static final Base64.Encoder base64encoder = Base64.getEncoder();
+    private static final Base64.Decoder base64decoder = Base64.getDecoder();
     private final String cookie_name;
 
     @Inject
@@ -27,7 +27,8 @@ public class SimpleCookieManager implements OAuthCookieManager
 
     public HttpServletResponse insertInternalToken(HttpServletResponse response, String internalToken)
     {
-        final String encodedInternalToken = new String(base64encoder.encode(internalToken.getBytes(StandardCharsets.UTF_8)));
+        final String encodedInternalToken = new String(base64encoder
+                .encode(internalToken.getBytes(StandardCharsets.UTF_8)));
         final Cookie cookie = new Cookie(cookie_name, encodedInternalToken);
 
         cookie.setPath("/");
@@ -39,7 +40,8 @@ public class SimpleCookieManager implements OAuthCookieManager
     @Override
     public Response.ResponseBuilder insertInternalToken(Response.ResponseBuilder response, String internalToken)
     {
-        final String encodedInternalToken = new String(base64encoder.encode(internalToken.getBytes(StandardCharsets.UTF_8)));
+        final String encodedInternalToken = new String(base64encoder
+                .encode(internalToken.getBytes(StandardCharsets.UTF_8)));
 
         response.cookie(new NewCookie(
                 cookie_name, encodedInternalToken,

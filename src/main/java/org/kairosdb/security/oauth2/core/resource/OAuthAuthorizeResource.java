@@ -20,7 +20,8 @@ import java.net.URISyntaxException;
 @Path("/api/oauth2")
 public class OAuthAuthorizeResource
 {
-    private final static Logger logger = LoggerFactory.getLogger(OAuthAuthorizeResource.class);
+    private static final Logger logger = LoggerFactory.getLogger(OAuthAuthorizeResource.class);
+
     @Context private HttpServletRequest httpRequest;
     private final OAuthService oAuthService;
 
